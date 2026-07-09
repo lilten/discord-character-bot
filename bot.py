@@ -315,14 +315,13 @@ class CharacterRoom:
         embed.add_field(name="🎭 Роль", value=self.role.mention, inline=True)
         embed.add_field(name="⚡ Сложность", value=f"{diff_config.get('emoji', '')} {self.difficulty}", inline=True)
         embed.add_field(
-            name="📝 Как участвовать",
-            value=f"Нажмите кнопку **«Отправить заявку»** ниже\n"
-                  f"Требуется роль: {self.role.mention}",
+            name="📝 Подать заявку",
+            value=f"Требуется роль: {self.role.mention}",
             inline=False
         )
         embed.add_field(
             name="📈 Статистика",
-            value="Всего заявок: 0",
+            value="Заявок: 0",
             inline=False
         )
         embed.set_footer(
@@ -611,12 +610,12 @@ async def setup_menu(interaction: discord.Interaction):
         description=(
             "Выберите рейд, для которого хотите создать лобби:\n\n"
             "**Доступные рейды:**\n"
-            ":regional_indicator_z: **Зерка** — древний дракон хаоса\n"
-            ":regional_indicator_k: **Казерос** — повелитель тьмы\n"
-            ":regional_indicator_s: **Собор** — священная цитадель\n"
-            ":regional_indicator_a: **Армог** — железная крепость\n"
-            ":regional_indicator_m: **Мордрум** — обитель смерти\n"
-            ":regional_indicator_e: **Эгир** — морской владыка"
+            ":regional_indicator_z: **Зерка**\n"
+            ":regional_indicator_k: **Казерос**\n"
+            ":regional_indicator_s: **Собор**\n"
+            ":regional_indicator_a: **Армог**\n"
+            ":regional_indicator_m: **Мордрум**\n"
+            ":regional_indicator_e: **Эгир**"
         ),
         color=discord.Color.gold()
     )
@@ -634,10 +633,7 @@ async def setup_menu(interaction: discord.Interaction):
     embed.add_field(
         name="⚠️ Важно",
         value=(
-            "• Один участник = одно активное лобби\n"
-            "• Закройте текущее лобби перед созданием нового\n"
             "• Для подачи заявки нужна роль рейда\n"
-            "• Заявка содержит только ссылку на оружейную"
         ),
         inline=False
     )
