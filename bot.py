@@ -460,7 +460,6 @@ class CharacterRoom:
                         f"Ваша заявка в лобби **{self.title}** одобрена!\n\n"
                         f"👑 **Лидер лобби:** {self.leader_nick}\n"
                         f"📁 **Канал:** {self.channel.mention}\n\n"
-                        f"Свяжитесь с лидером для координации!"
                     ),
                     color=discord.Color.green()
                 )
