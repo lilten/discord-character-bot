@@ -22,42 +22,49 @@ active_rooms: Dict[str, 'CharacterRoom'] = {}
 # КОНФИГУРАЦИЯ РЕЙДОВ
 # ============================================
 RAID_CONFIG = {
-    "зерка": {
-        "emoji": "🐉",
+    "「📈」зерка": {
+        "emoji": "🇿",
         "color": discord.Color.green(),
-        "description": "Зерка — древний дракон хаоса"
+        "description": "Зерка — древний дракон хаоса",
+        "short_name": "зерка"
     },
-    "казерос": {
-        "emoji": "⚔️",
+    "「📈」казерос": {
+        "emoji": "🇰",
         "color": discord.Color.red(),
-        "description": "Казерос — повелитель тьмы"
+        "description": "Казерос — повелитель тьмы",
+        "short_name": "казерос"
     },
-    "собор": {
-        "emoji": "⛪",
+    "「📈」собор": {
+        "emoji": "🇸",
         "color": discord.Color.gold(),
-        "description": "Собор — священная цитадель"
+        "description": "Собор — священная цитадель",
+        "short_name": "собор"
     },
-    "армог": {
-        "emoji": "🛡️",
+    "「📈」армог": {
+        "emoji": "🇦",
         "color": discord.Color.blue(),
-        "description": "Армог — железная крепость"
+        "description": "Армог — железная крепость",
+        "short_name": "армог"
     },
-    "мордрум": {
-        "emoji": "💀",
+    "「📈」мордрум": {
+        "emoji": "🇲",
         "color": discord.Color.purple(),
-        "description": "Мордрум — обитель смерти"
+        "description": "Мордрум — обитель смерти",
+        "short_name": "мордрум"
     },
-    "эгир": {
-        "emoji": "🌊",
+    "「📈」эгир": {
+        "emoji": "🇪",
         "color": discord.Color.teal(),
-        "description": "Эгир — морской владыка"
+        "description": "Эгир — морской владыка",
+        "short_name": "эгир"
     }
 }
 
 DIFFICULTY_CONFIG = {
-    "Обычный": {"emoji": "🟢", "color": discord.Color.green()},
-    "Героический": {"emoji": "🔴", "color": discord.Color.red()}
+    "Обычный": {"emoji": "🇳", "color": discord.Color.green()},
+    "Героический": {"emoji": "🇭", "color": discord.Color.red()}
 }
+
 
 # ============================================
 # МОДАЛЬНОЕ ОКНО ДЛЯ ОПИСАНИЯ ЛОББИ
@@ -71,7 +78,7 @@ class CreateLobbyModal(ui.Modal):
         self.difficulty = difficulty
         self.target_channel = channel
         self.role = role
-    
+
     description_input = ui.TextInput(
         label="📝 Описание лобби",
         placeholder="Опишите, кого ищете, требования, условия...",
@@ -79,10 +86,10 @@ class CreateLobbyModal(ui.Modal):
         required=True,
         max_length=1000
     )
-    
+
     async def on_submit(self, interaction: discord.Interaction):
         creator_id = str(interaction.user.id)
-        
+
         if creator_id in active_rooms:
             existing_room = active_rooms[creator_id]
             await interaction.response.send_message(
@@ -93,30 +100,32 @@ class CreateLobbyModal(ui.Modal):
                 ephemeral=True
             )
             return
-        
-        raid_emoji = RAID_CONFIG[self.raid_name.lower()]["emoji"]
+
+        raid_emoji = RAID_CONFIG[self.raid_name]["emoji"]
         diff_emoji = DIFFICULTY_CONFIG[self.difficulty]["emoji"]
-        
+        short_name = RAID_CONFIG[self.raid_name]["short_name"]
+
         room = CharacterRoom(
             creator=interaction.user,
             channel=self.target_channel,
             role=self.role,
-            title=f"{raid_emoji} {self.raid_name.upper()} - {diff_emoji} {self.difficulty}",
+            title=f"{raid_emoji} {short_name.upper()} - {diff_emoji} {self.difficulty}",
             description=self.description_input.value,
             raid_name=self.raid_name,
             difficulty=self.difficulty
         )
-        
+
         active_rooms[creator_id] = room
-        
+
         await room.create_room_message()
-        
+
         await interaction.response.send_message(
             f"✅ Лобби создано в канале {self.target_channel.mention}!\n"
-            f"🎯 {raid_emoji} **{self.raid_name.upper()}** — {diff_emoji} **{self.difficulty}**\n"
+            f"🎯 {raid_emoji} **{short_name.upper()}** — {diff_emoji} **{self.difficulty}**\n"
             f"📝 {self.description_input.value[:100]}...",
             ephemeral=True
         )
+
 
 # ============================================
 # VIEW ДЛЯ ВЫБОРА СЛОЖНОСТИ
@@ -128,8 +137,8 @@ class DifficultyView(ui.View):
         self.raid_name = raid_name
         self.target_channel = channel
         self.role = role
-    
-    @ui.button(label="🟢 Обычный", style=discord.ButtonStyle.green)
+
+    @ui.button(label="🇳 Обычный", style=discord.ButtonStyle.green)
     async def normal_button(self, interaction: discord.Interaction, button: ui.Button):
         modal = CreateLobbyModal(
             raid_name=self.raid_name,
@@ -139,8 +148,8 @@ class DifficultyView(ui.View):
         )
         await interaction.response.send_modal(modal)
         self.stop()
-    
-    @ui.button(label="🔴 Героический", style=discord.ButtonStyle.red)
+
+    @ui.button(label="🇭 Героический", style=discord.ButtonStyle.red)
     async def heroic_button(self, interaction: discord.Interaction, button: ui.Button):
         modal = CreateLobbyModal(
             raid_name=self.raid_name,
@@ -151,6 +160,7 @@ class DifficultyView(ui.View):
         await interaction.response.send_modal(modal)
         self.stop()
 
+
 # ============================================
 # ГЛАВНОЕ МЕНЮ СОЗДАНИЯ ЛОББИ
 # ============================================
@@ -158,30 +168,31 @@ class DifficultyView(ui.View):
 class CreateLobbyView(ui.View):
     def __init__(self):
         super().__init__(timeout=None)
-    
+
     async def get_raid_data(self, interaction: discord.Interaction, raid_key: str):
         guild = interaction.guild
-        
+
         channel = discord.utils.get(guild.text_channels, name=raid_key.lower())
         if not channel:
             await interaction.response.send_message(
                 f"❌ Канал «{raid_key}» не найден!\n"
-                f"Убедитесь, что создан текстовый канал с названием **{raid_key.lower()}**",
+                f"Убедитесь, что создан текстовый канал с названием **{raid_key}**",
                 ephemeral=True
             )
             return None, None
-        
-        role = discord.utils.get(guild.roles, name=raid_key.lower())
+
+        short_name = RAID_CONFIG[raid_key]["short_name"]
+        role = discord.utils.get(guild.roles, name=short_name.lower())
         if not role:
             await interaction.response.send_message(
-                f"❌ Роль «{raid_key}» не найдена!\n"
-                f"Убедитесь, что создана роль с названием **{raid_key.lower()}**",
+                f"❌ Роль «{short_name}» не найдена!\n"
+                f"Убедитесь, что создана роль с названием **{short_name}**",
                 ephemeral=True
             )
             return None, None
-        
+
         return channel, role
-    
+
     async def handle_raid_click(self, interaction: discord.Interaction, raid_key: str):
         if str(interaction.user.id) in active_rooms:
             existing_room = active_rooms[str(interaction.user.id)]
@@ -193,46 +204,47 @@ class CreateLobbyView(ui.View):
                 ephemeral=True
             )
             return
-        
+
         channel, role = await self.get_raid_data(interaction, raid_key)
         if not channel or not role:
             return
-        
+
         raid_config = RAID_CONFIG[raid_key]
-        
+
         embed = discord.Embed(
-            title=f"{raid_config['emoji']} {raid_key.upper()} — выбор сложности",
+            title=f"{raid_config['emoji']} {raid_config['short_name'].upper()} — выбор сложности",
             description=f"{raid_config['description']}\n\nВыберите уровень сложности:",
             color=raid_config['color']
         )
         embed.set_footer(text="Обычный или Героический")
-        
-        view = DifficultyView(raid_key.capitalize(), channel, role)
+
+        view = DifficultyView(raid_key, channel, role)
         await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
-    
-    @ui.button(label="Зерка", style=discord.ButtonStyle.green, emoji="🐉", row=0)
+
+    @ui.button(label="Зерка", style=discord.ButtonStyle.green, emoji="🇿", row=0)
     async def zerka_button(self, interaction: discord.Interaction, button: ui.Button):
-        await self.handle_raid_click(interaction, "зерка")
-    
-    @ui.button(label="Казерос", style=discord.ButtonStyle.red, emoji="⚔️", row=0)
+        await self.handle_raid_click(interaction, "「📈」зерка")
+
+    @ui.button(label="Казерос", style=discord.ButtonStyle.red, emoji="🇰", row=0)
     async def kazeros_button(self, interaction: discord.Interaction, button: ui.Button):
-        await self.handle_raid_click(interaction, "казерос")
-    
-    @ui.button(label="Собор", style=discord.ButtonStyle.gray, emoji="⛪", row=0)
+        await self.handle_raid_click(interaction, "「📈」казерос")
+
+    @ui.button(label="Собор", style=discord.ButtonStyle.gray, emoji="🇸", row=0)
     async def sobor_button(self, interaction: discord.Interaction, button: ui.Button):
-        await self.handle_raid_click(interaction, "собор")
-    
-    @ui.button(label="Армог", style=discord.ButtonStyle.blurple, emoji="🛡️", row=1)
+        await self.handle_raid_click(interaction, "「📈」собор")
+
+    @ui.button(label="Армог", style=discord.ButtonStyle.blurple, emoji="🇦", row=1)
     async def armog_button(self, interaction: discord.Interaction, button: ui.Button):
-        await self.handle_raid_click(interaction, "армог")
-    
-    @ui.button(label="Мордрум", style=discord.ButtonStyle.red, emoji="💀", row=1)
+        await self.handle_raid_click(interaction, "「📈」армог")
+
+    @ui.button(label="Мордрум", style=discord.ButtonStyle.red, emoji="🇲", row=1)
     async def mordrum_button(self, interaction: discord.Interaction, button: ui.Button):
-        await self.handle_raid_click(interaction, "мордрум")
-    
-    @ui.button(label="Эгир", style=discord.ButtonStyle.blurple, emoji="🌊", row=1)
+        await self.handle_raid_click(interaction, "「📈」мордрум")
+
+    @ui.button(label="Эгир", style=discord.ButtonStyle.blurple, emoji="🇪", row=1)
     async def egir_button(self, interaction: discord.Interaction, button: ui.Button):
-        await self.handle_raid_click(interaction, "эгир")
+        await self.handle_raid_click(interaction, "「📈」эгир")
+
 
 # ============================================
 # МОДАЛЬНОЕ ОКНО ДЛЯ ПОДАЧИ ЗАЯВКИ
@@ -242,20 +254,20 @@ class ApplicationModal(ui.Modal, title="Подать заявку"):
     def __init__(self, room):
         super().__init__()
         self.room = room
-    
+
     character_url = ui.TextInput(
         label="🔗 Ссылка на оружейную",
         placeholder="https://example.com/my-armory",
         max_length=500,
         required=True
     )
-    
+
     async def on_submit(self, interaction: discord.Interaction):
         success, response = await self.room.add_applicant(
             interaction.user,
             self.character_url.value
         )
-        
+
         if success:
             await interaction.response.send_message(
                 "✅ Ваша заявка успешно подана!",
@@ -266,6 +278,7 @@ class ApplicationModal(ui.Modal, title="Подать заявку"):
                 f"❌ {response}",
                 ephemeral=True
             )
+
 
 # ============================================
 # КЛАСС КОМНАТЫ (ЛОББИ)
@@ -288,11 +301,11 @@ class CharacterRoom:
 
     async def create_room_message(self):
         """Создает основное сообщение комнаты с кнопками и пингом роли"""
-        raid_config = RAID_CONFIG.get(self.raid_name.lower(), {})
+        raid_config = RAID_CONFIG.get(self.raid_name, {})
         diff_config = DIFFICULTY_CONFIG.get(self.difficulty, {})
-        
+
         color = diff_config.get("color", raid_config.get("color", discord.Color.blue()))
-        
+
         embed = discord.Embed(
             title=f"📋 {self.title}",
             description=self.description or f"Поиск кандидатов на роль {self.role.mention}",
@@ -309,13 +322,14 @@ class CharacterRoom:
         )
         embed.add_field(
             name="📈 Статистика",
-            value="Заявок: 0 | Принято: 0 | Отклонено: 0 | Ожидают: 0",
+            value="Всего заявок: 0",
             inline=False
         )
-        embed.set_footer(text=f"Создатель: {self.creator.display_name} | {self.raid_name} | {self.difficulty}")
+        embed.set_footer(
+            text=f"Создатель: {self.creator.display_name} | {raid_config.get('short_name', '')} | {self.difficulty}")
 
         view = RoomView(self)
-        
+
         self.main_message = await self.channel.send(
             content=f"{self.role.mention} — {self.creator.mention} открыл набор!",
             embed=embed,
@@ -332,16 +346,15 @@ class CharacterRoom:
 
         diff_config = DIFFICULTY_CONFIG.get(self.difficulty, {})
         if not self.is_open:
-            embed.set_field_at(2, name="⚡ Сложность", value=f"{diff_config.get('emoji', '')} {self.difficulty} (ЗАКРЫТО)", inline=True)
+            embed.set_field_at(2, name="⚡ Сложность",
+                               value=f"{diff_config.get('emoji', '')} {self.difficulty} (ЗАКРЫТО)", inline=True)
         else:
-            embed.set_field_at(2, name="⚡ Сложность", value=f"{diff_config.get('emoji', '')} {self.difficulty}", inline=True)
+            embed.set_field_at(2, name="⚡ Сложность", value=f"{diff_config.get('emoji', '')} {self.difficulty}",
+                               inline=True)
 
         total = len(self.applicants)
-        accepted = sum(1 for a in self.applicants.values() if a['status'] == 'accepted')
-        rejected = sum(1 for a in self.applicants.values() if a['status'] == 'rejected')
-        pending = sum(1 for a in self.applicants.values() if a['status'] == 'pending')
 
-        stats = f"Заявок: {total} | Принято: {accepted} | Отклонено: {rejected} | Ожидают: {pending}"
+        stats = f"Всего заявок: {total}"
         embed.set_field_at(4, name="📈 Статистика", value=stats, inline=False)
 
         view = RoomView(self) if self.is_open else None
@@ -373,8 +386,8 @@ class CharacterRoom:
         embed.add_field(name="👤 Участник", value=user.mention, inline=True)
         embed.add_field(name="📌 Статус", value="⏳ На рассмотрении", inline=True)
         embed.add_field(
-            name="🔗 Ссылка на оружейную", 
-            value=f"[Открыть оружейную]({character_url})", 
+            name="🔗 Ссылка на оружейную",
+            value=f"[Открыть оружейную]({character_url})",
             inline=False
         )
         embed.set_footer(text=f"ID: {user.id} | Создатель: {self.creator.display_name}")
@@ -440,7 +453,7 @@ class CharacterRoom:
                 embed = discord.Embed(
                     title="✅ Заявка принята!",
                     description=f"Ваша заявка в лобби **{self.title}** одобрена!\n"
-                               f"Создатель: {self.creator.mention}",
+                                f"Создатель: {self.creator.mention}",
                     color=discord.Color.green()
                 )
             else:
@@ -491,10 +504,11 @@ class CharacterRoom:
                         await applicant['message'].edit(embed=embed, view=None)
 
         await self.update_main_message()
-        
+
         creator_id = str(self.creator.id)
         if creator_id in active_rooms:
             del active_rooms[creator_id]
+
 
 # ============================================
 # VIEW С КНОПКАМИ ДЛЯ ЛОББИ
@@ -536,18 +550,12 @@ class RoomView(ui.View):
     async def stats_button(self, interaction: discord.Interaction, button: ui.Button):
         """Кнопка для просмотра статистики"""
         total = len(self.room.applicants)
-        accepted = sum(1 for a in self.room.applicants.values() if a['status'] == 'accepted')
-        rejected = sum(1 for a in self.room.applicants.values() if a['status'] == 'rejected')
-        pending = sum(1 for a in self.room.applicants.values() if a['status'] == 'pending')
 
         embed = discord.Embed(
             title=f"📊 Статистика: {self.room.title}",
             color=discord.Color.blue()
         )
         embed.add_field(name="📝 Всего заявок", value=str(total), inline=True)
-        embed.add_field(name="✅ Принято", value=str(accepted), inline=True)
-        embed.add_field(name="❌ Отклонено", value=str(rejected), inline=True)
-        embed.add_field(name="⏳ Ожидают", value=str(pending), inline=True)
         embed.set_footer(text=f"Создатель: {self.room.creator.display_name}")
 
         await interaction.response.send_message(embed=embed, ephemeral=True)
@@ -564,9 +572,10 @@ class RoomView(ui.View):
 
         await self.room.close_room()
         await interaction.response.send_message(
-            "🔒 Набор закрыт! Теперь вы можете создать новое лобби.",
+            "🔒 Набор закрыт!",
             ephemeral=True
         )
+
 
 # ============================================
 # VIEW С КНОПКАМИ ДЛЯ ЗАЯВКИ
@@ -588,6 +597,7 @@ class ApplicationView(ui.View):
         """Кнопка для отклонения заявки"""
         await self.room.process_selection(interaction, self.applicant, False)
 
+
 # ============================================
 # СЛЭШ-КОМАНДЫ
 # ============================================
@@ -599,19 +609,19 @@ async def setup_menu(interaction: discord.Interaction):
     embed = discord.Embed(
         title="🎯 Создание лобби для рейда",
         description="Выберите рейд, для которого хотите создать лобби:\n\n"
-                     "**Доступные рейды:**\n"
-                     "🐉 **Зерка** — древний дракон хаоса\n"
-                     "⚔️ **Казерос** — повелитель тьмы\n"
-                     "⛪ **Собор** — священная цитадель\n"
-                     "🛡️ **Армог** — железная крепость\n"
-                     "💀 **Мордрум** — обитель смерти\n"
-                     "🌊 **Эгир** — морской владыка",
+                    "**Доступные рейды:**\n"
+                    "🇿 **Зерка**\n"
+                    "🇰 **Казерос**\n"
+                    "🇸 **Собор**\n"
+                    "🇦 **Армог**\n"
+                    "🇲 **Мордрум**\n"
+                    "🇪 **Эгир**,
         color=discord.Color.gold()
     )
     embed.add_field(
         name="📌 Как это работает?",
         value="1. Нажмите на кнопку рейда\n"
-              "2. Выберите сложность: Обычный или Героический\n"
+              "2. Выберите сложность: 🇳 Обычный или 🇭 Героический\n"
               "3. Заполните описание лобби\n"
               "4. Лобби создастся в соответствующем канале\n"
               "5. Участники с нужной ролью смогут подать заявку",
@@ -619,55 +629,51 @@ async def setup_menu(interaction: discord.Interaction):
     )
     embed.add_field(
         name="⚠️ Важно",
-        value="• Один участник = одно активное лобби\n"
-              "• Закройте текущее лобби перед созданием нового\n"
-              "• Для подачи заявки нужна роль рейда\n"
-              "• Заявка содержит только ссылку на оружейную",
+        value="• Для подачи заявки нужна роль рейда\n"
         inline=False
     )
     embed.set_footer(text="Выберите рейд, чтобы начать")
-    
+
     view = CreateLobbyView()
     await interaction.response.send_message(embed=embed, view=view)
+
 
 @bot.tree.command(name="close_room", description="Закрыть ваше активное лобби")
 async def close_room_command(interaction: discord.Interaction):
     """Закрывает лобби пользователя"""
     creator_id = str(interaction.user.id)
-    
+
     if creator_id not in active_rooms:
         await interaction.response.send_message(
             "❌ У вас нет активного лобби!",
             ephemeral=True
         )
         return
-    
+
     room = active_rooms[creator_id]
     await room.close_room()
     await interaction.response.send_message(
-        "🔒 Лобби закрыто! Теперь вы можете создать новое.",
+        "🔒 Набор закрыт",
         ephemeral=True
     )
+
 
 @bot.tree.command(name="my_room", description="Показать информацию о вашем лобби")
 async def my_room_command(interaction: discord.Interaction):
     """Показывает лобби пользователя"""
     creator_id = str(interaction.user.id)
-    
+
     if creator_id not in active_rooms:
         await interaction.response.send_message(
             "❌ У вас нет активного лобби!",
             ephemeral=True
         )
         return
-    
+
     room = active_rooms[creator_id]
-    
+
     total = len(room.applicants)
-    accepted = sum(1 for a in room.applicants.values() if a['status'] == 'accepted')
-    rejected = sum(1 for a in room.applicants.values() if a['status'] == 'rejected')
-    pending = sum(1 for a in room.applicants.values() if a['status'] == 'pending')
-    
+
     embed = discord.Embed(
         title=f"🏠 Ваше лобби: {room.title}",
         description=room.description or "Нет описания",
@@ -677,13 +683,14 @@ async def my_room_command(interaction: discord.Interaction):
     embed.add_field(name="🎭 Роль", value=room.role.mention, inline=True)
     embed.add_field(name="⚡ Сложность", value=room.difficulty, inline=True)
     embed.add_field(name="📊 Статус", value="🟢 Открыто" if room.is_open else "🔴 Закрыто", inline=True)
-    embed.add_field(name="📝 Заявок", value=f"Всего: {total} | ✅ {accepted} | ❌ {rejected} | ⏳ {pending}", inline=False)
-    
+    embed.add_field(name="📝 Заявок", value=f"Всего: {total}", inline=False)
+
     view = ui.View()
     if room.main_message:
         view.add_item(ui.Button(label="Перейти к лобби", url=room.main_message.jump_url))
-    
+
     await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+
 
 # ============================================
 # ЗАПУСК БОТА
@@ -693,14 +700,15 @@ async def my_room_command(interaction: discord.Interaction):
 async def on_ready():
     print(f'✅ Бот {bot.user.name} запущен и готов к работе!')
     print(f'ID бота: {bot.user.id}')
-    
+
     try:
         synced = await bot.tree.sync()
         print(f"✅ Синхронизировано {len(synced)} слэш-команд")
     except Exception as e:
         print(f"❌ Ошибка синхронизации: {e}")
-    
+
     print('------')
+
 
 if __name__ == "__main__":
     TOKEN = os.environ.get('DISCORD_TOKEN')
