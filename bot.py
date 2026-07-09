@@ -545,15 +545,7 @@ class RoomView(ui.View):
         modal = ApplicationModal(self.room)
         await interaction.response.send_modal(modal)
 
-    @ui.button(label="📊 Статистика", style=discord.ButtonStyle.blurple)
-    async def stats_button(self, interaction: discord.Interaction, button: ui.Button):
-        """Кнопка для просмотра статистики"""
-        total = len(self.room.applicants)
-
-        embed = discord.Embed(
-            title=f"📊 Статистика: {self.room.title}",
-            color=discord.Color.blue()
-        )
+   
         embed.add_field(name="📝 Всего заявок", value=str(total), inline=True)
         embed.set_footer(text=f"Создатель лобби: {self.room.creator.display_name}")
 
