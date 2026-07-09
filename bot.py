@@ -270,7 +270,7 @@ class ApplicationModal(ui.Modal, title="Подать заявку"):
 
         if success:
             await interaction.response.send_message(
-                "✅ Ваша заявка успешно подана!",
+                "✅ Ваша заявка успешно отправлена создателю!",
                 ephemeral=True
             )
         else:
@@ -316,7 +316,7 @@ class CharacterRoom:
         embed.add_field(name="⚡ Сложность", value=f"{diff_config.get('emoji', '')} {self.difficulty}", inline=True)
         embed.add_field(
             name="📝 Подать заявку",
-            value=f"Требуется роль: {self.role.mention}",
+            value=f"Требуется роль: {self.role.mention}\nЗаявки приходят в ЛС создателю",
             inline=False
         )
         embed.add_field(
@@ -352,7 +352,6 @@ class CharacterRoom:
                                inline=True)
 
         total = len(self.applicants)
-
         stats = f"Всего заявок: {total}"
         embed.set_field_at(4, name="📈 Статистика", value=stats, inline=False)
 
@@ -361,7 +360,7 @@ class CharacterRoom:
         await self.main_message.edit(embed=embed, view=view)
 
     async def add_applicant(self, user: discord.Member, character_url: str):
-        """Добавляет заявку от участника"""
+        """Добавляет заявку и отправляет в ЛС создателю"""
         if not self.is_open:
             return False, "Набор в лобби закрыт!"
 
@@ -371,45 +370,42 @@ class CharacterRoom:
         if self.role not in user.roles:
             return False, f"У вас нет роли {self.role.mention}!"
 
-        self.applicants[str(user.id)] = {
-            'user': user,
-            'character_url': character_url,
-            'status': 'pending'
-        }
+        # Отправляем заявку в ЛС создателю
+        try:
+            embed = discord.Embed(
+                title=f"📝 Новая заявка в: {self.title}",
+                description=f"**От участника:** {user.mention} ({user.display_name})\n"
+                           f"**Ссылка на оружейную:** [Открыть]({character_url})",
+                color=discord.Color.gold()
+            )
+            embed.set_thumbnail(url=user.display_avatar.url)
+            embed.add_field(name="📌 Статус", value="⏳ Ожидает решения", inline=True)
+            embed.set_footer(text=f"ID: {user.id} | Нажмите ✅ или ❌ ниже")
 
-        embed = discord.Embed(
-            title=f"📝 Заявка в: {self.title}",
-            color=discord.Color.gold()
-        )
-        embed.set_thumbnail(url=user.display_avatar.url)
-        embed.add_field(name="👤 Участник", value=user.mention, inline=True)
-        embed.add_field(name="📌 Статус", value="⏳ На рассмотрении", inline=True)
-        embed.add_field(
-            name="🔗 Ссылка на оружейную",
-            value=f"[Открыть оружейную]({character_url})",
-            inline=False
-        )
-        embed.set_footer(text=f"ID: {user.id} | Создатель: {self.creator.display_name}")
+            view = ApplicationDMView(self, user)
 
-        view = ApplicationView(self, user)
+            dm_message = await self.creator.send(embed=embed, view=view)
 
-        application_message = await self.channel.send(embed=embed, view=view)
-        self.applicants[str(user.id)]['message'] = application_message
+            self.applicants[str(user.id)] = {
+                'user': user,
+                'character_url': character_url,
+                'status': 'pending',
+                'dm_message': dm_message
+            }
+
+        except discord.Forbidden:
+            await self.channel.send(
+                f"{self.creator.mention} ⚠️ Не могу отправить заявку в ЛС! Откройте личные сообщения.",
+                delete_after=30
+            )
+            return False, "У создателя закрыты личные сообщения!"
 
         await self.update_main_message()
-
-        return True, "Заявка успешно подана!"
+        return True, "Заявка успешно отправлена создателю!"
 
     async def process_selection(self, interaction: discord.Interaction,
                                 user: discord.Member, accepted: bool):
-        """Обрабатывает выбор создателя"""
-        if interaction.user.id != self.creator.id:
-            await interaction.response.send_message(
-                "❌ Только создатель может принимать решения!",
-                ephemeral=True
-            )
-            return
-
+        """Обрабатывает выбор создателя в ЛС"""
         applicant = self.applicants.get(str(user.id))
         if not applicant or applicant['status'] != 'pending':
             await interaction.response.send_message(
@@ -420,25 +416,27 @@ class CharacterRoom:
 
         if accepted:
             applicant['status'] = 'accepted'
-            await self.notify_applicant(user, True)
 
-            if applicant.get('message'):
-                embed = applicant['message'].embeds[0]
+            if applicant.get('dm_message'):
+                embed = applicant['dm_message'].embeds[0]
                 embed.color = discord.Color.green()
-                embed.set_field_at(1, name="📌 Статус", value="✅ Принят!", inline=True)
-                await applicant['message'].edit(embed=embed, view=None)
+                embed.set_field_at(0, name="📌 Статус", value="✅ Принято!", inline=True)
+                await applicant['dm_message'].edit(embed=embed, view=None)
+
+            await self.notify_applicant(user, True)
         else:
             applicant['status'] = 'rejected'
+
+            if applicant.get('dm_message'):
+                embed = applicant['dm_message'].embeds[0]
+                embed.color = discord.Color.red()
+                embed.set_field_at(0, name="📌 Статус", value="❌ Отклонено", inline=True)
+                await applicant['dm_message'].edit(embed=embed, view=None)
+
             await self.notify_applicant(user, False)
 
-            if applicant.get('message'):
-                embed = applicant['message'].embeds[0]
-                embed.color = discord.Color.red()
-                embed.set_field_at(1, name="📌 Статус", value="❌ Отклонен", inline=True)
-                await applicant['message'].edit(embed=embed, view=None)
-
         await interaction.response.send_message(
-            f"{'✅ Принято' if accepted else '❌ Отклонено'}!",
+            f"✅ Заявка {'принята' if accepted else 'отклонена'}!",
             ephemeral=True
         )
 
@@ -466,16 +464,7 @@ class CharacterRoom:
             embed.add_field(name="Канал", value=self.channel.mention, inline=True)
             await user.send(embed=embed)
         except discord.Forbidden:
-            if accepted:
-                await self.channel.send(
-                    f"{user.mention} ✅ Ваша заявка принята!",
-                    delete_after=30
-                )
-            else:
-                await self.channel.send(
-                    f"{user.mention} ❌ Ваша заявка отклонена.",
-                    delete_after=30
-                )
+            pass
 
     async def check_all_processed(self):
         """Проверяет, все ли заявки обработаны"""
@@ -496,11 +485,11 @@ class CharacterRoom:
                 if applicant['status'] == 'pending':
                     applicant['status'] = 'rejected'
                     await self.notify_applicant(applicant['user'], False)
-                    if applicant.get('message'):
-                        embed = applicant['message'].embeds[0]
+                    if applicant.get('dm_message'):
+                        embed = applicant['dm_message'].embeds[0]
                         embed.color = discord.Color.red()
-                        embed.set_field_at(1, name="📌 Статус", value="❌ Набор закрыт", inline=True)
-                        await applicant['message'].edit(embed=embed, view=None)
+                        embed.set_field_at(0, name="📌 Статус", value="❌ Набор закрыт", inline=True)
+                        await applicant['dm_message'].edit(embed=embed, view=None)
 
         await self.update_main_message()
 
@@ -510,7 +499,7 @@ class CharacterRoom:
 
 
 # ============================================
-# VIEW С КНОПКАМИ ДЛЯ ЛОББИ
+# VIEW С КНОПКАМИ ДЛЯ ЛОББИ (В КАНАЛЕ)
 # ============================================
 
 class RoomView(ui.View):
@@ -577,10 +566,10 @@ class RoomView(ui.View):
 
 
 # ============================================
-# VIEW С КНОПКАМИ ДЛЯ ЗАЯВКИ
+# VIEW С КНОПКАМИ ДЛЯ ЗАЯВКИ В ЛС
 # ============================================
 
-class ApplicationView(ui.View):
+class ApplicationDMView(ui.View):
     def __init__(self, room: CharacterRoom, applicant: discord.Member):
         super().__init__(timeout=None)
         self.room = room
@@ -626,7 +615,8 @@ async def setup_menu(interaction: discord.Interaction):
             "2. Выберите сложность: :regional_indicator_n: Обычный или :regional_indicator_h: Героический\n"
             "3. Заполните описание лобби\n"
             "4. Лобби создастся в соответствующем канале\n"
-            "5. Участники с нужной ролью смогут подать заявку"
+            "5. Участники с нужной ролью смогут подать заявку\n"
+            "6. **Заявки приходят в ЛС создателю**"
         ),
         inline=False
     )
@@ -634,11 +624,12 @@ async def setup_menu(interaction: discord.Interaction):
         name="⚠️ Важно",
         value=(
             "• Для подачи заявки нужна роль рейда\n"
+            "• **Откройте ЛС для получения заявок**"
         ),
         inline=False
     )
     embed.set_footer(text="Выберите рейд, чтобы начать")
-    
+
     view = CreateLobbyView()
     await interaction.response.send_message(embed=embed, view=view)
 
@@ -689,6 +680,11 @@ async def my_room_command(interaction: discord.Interaction):
     embed.add_field(name="⚡ Сложность", value=room.difficulty, inline=True)
     embed.add_field(name="📊 Статус", value="🟢 Открыто" if room.is_open else "🔴 Закрыто", inline=True)
     embed.add_field(name="📝 Заявок", value=f"Всего: {total}", inline=False)
+    embed.add_field(
+        name="📬 Уведомления",
+        value="Заявки приходят в личные сообщения",
+        inline=False
+    )
 
     view = ui.View()
     if room.main_message:
