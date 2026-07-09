@@ -79,6 +79,13 @@ class CreateLobbyModal(ui.Modal):
         self.target_channel = channel
         self.role = role
 
+    leader_nick = ui.TextInput(
+        label="👑 Ник лидера лобби в игре",
+        placeholder="введите ник",
+        max_length=100,
+        required=True
+    )
+
     description_input = ui.TextInput(
         label="📝 Описание",
         placeholder="прим: 4-4 +дд +сап",
@@ -112,7 +119,8 @@ class CreateLobbyModal(ui.Modal):
             title=f"{raid_emoji} {short_name.upper()} - {diff_emoji} {self.difficulty}",
             description=self.description_input.value,
             raid_name=self.raid_name,
-            difficulty=self.difficulty
+            difficulty=self.difficulty,
+            leader_nick=self.leader_nick.value
         )
 
         active_rooms[creator_id] = room
@@ -122,6 +130,7 @@ class CreateLobbyModal(ui.Modal):
         await interaction.response.send_message(
             f"✅ Лобби создано в канале {self.target_channel.mention}!\n"
             f"🎯 {raid_emoji} **{short_name.upper()}** — {diff_emoji} **{self.difficulty}**\n"
+            f"👑 Лидер: **{self.leader_nick.value}**\n"
             f"📝 {self.description_input.value[:100]}...",
             ephemeral=True
         )
@@ -270,7 +279,7 @@ class ApplicationModal(ui.Modal, title="Подать заявку"):
 
         if success:
             await interaction.response.send_message(
-                "✅ Ваша заявка успешно отправлена создателю!",
+                "✅ Ваша заявка успешно отправлена!",
                 ephemeral=True
             )
         else:
@@ -311,12 +320,12 @@ class CharacterRoom:
             description=self.description or f"Поиск кандидатов на роль {self.role.mention}",
             color=color
         )
-        embed.add_field(name="👑 Создатель", value=self.creator.mention, inline=True)
+        embed.add_field(name="👑 РЛ", value=self.creator.mention, inline=True)
         embed.add_field(name="🎭 Роль", value=self.role.mention, inline=True)
         embed.add_field(name="⚡ Сложность", value=f"{diff_config.get('emoji', '')} {self.difficulty}", inline=True)
         embed.add_field(
             name="📝 Подать заявку",
-            value=f"Требуется роль: {self.role.mention}\nЗаявки приходят в ЛС создателю",
+            value=f"Требуется роль: {self.role.mention}\n",
             inline=False
         )
         embed.add_field(
@@ -325,7 +334,7 @@ class CharacterRoom:
             inline=False
         )
         embed.set_footer(
-            text=f"Создатель: {self.creator.display_name} | {raid_config.get('short_name', '')} | {self.difficulty}")
+            text=f"РЛ: {self.creator.display_name} | {raid_config.get('short_name', '')} | {self.difficulty}")
 
         view = RoomView(self)
 
@@ -360,7 +369,7 @@ class CharacterRoom:
         await self.main_message.edit(embed=embed, view=view)
 
     async def add_applicant(self, user: discord.Member, character_url: str):
-        """Добавляет заявку и отправляет в ЛС создателю"""
+        """Добавляет заявку и отправляет в лс РЛу"""
         if not self.is_open:
             return False, "Набор в лобби закрыт!"
 
@@ -394,7 +403,7 @@ class CharacterRoom:
             }
 
             await self.update_main_message()
-            return True, "Заявка успешно отправлена создателю!"
+            return True, "Заявка успешно отправлена!"
 
         except discord.Forbidden:
             return False, "У создателя закрыты личные сообщения!"
@@ -448,7 +457,7 @@ class CharacterRoom:
                 embed = discord.Embed(
                     title="✅ Заявка принята!",
                     description=f"Ваша заявка в лобби **{self.title}** одобрена!\n"
-                                f"Создатель: {self.creator.mention}",
+                                f"РЛ: {self.creator.mention}",
                     color=discord.Color.green()
                 )
             else:
@@ -538,7 +547,7 @@ class RoomView(ui.View):
             color=discord.Color.blue()
         )
         embed.add_field(name="📝 Всего заявок", value=str(total), inline=True)
-        embed.set_footer(text=f"Создатель: {self.room.creator.display_name}")
+        embed.set_footer(text=f"РЛ: {self.room.creator.display_name}")
 
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
@@ -547,7 +556,7 @@ class RoomView(ui.View):
         """Кнопка для закрытия комнаты"""
         if interaction.user.id != self.room.creator.id:
             await interaction.response.send_message(
-                "❌ Только создатель может закрыть набор!",
+                "❌ Только РЛ может закрыть набор!",
                 ephemeral=True
             )
             return
@@ -610,7 +619,7 @@ async def setup_menu(interaction: discord.Interaction):
             "3. Заполните описание лобби\n"
             "4. Лобби создастся в соответствующем канале\n"
             "5. Участники с нужной ролью смогут подать заявку\n"
-            "6. **Заявки приходят в ЛС создателю**"
+            "6. **Заявки приходят в ЛС создателю лобби**"
         ),
         inline=False
     )
