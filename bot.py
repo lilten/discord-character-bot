@@ -80,8 +80,8 @@ class CreateLobbyModal(ui.Modal):
         self.role = role
 
     description_input = ui.TextInput(
-        label="📝 4-4",
-        placeholder="+дд +сап",
+        label="📝 Описание",
+        placeholder="прим: 4-4 +дд +сап",
         style=discord.TextStyle.paragraph,
         required=True,
         max_length=1000
