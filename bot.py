@@ -25,37 +25,37 @@ RAID_CONFIG = {
     "「📈」зерка": {
         "emoji": "🇿",
         "color": discord.Color.green(),
-        "description": "Зерка — древний дракон хаоса",
+        "description": "Зерка"
         "short_name": "зерка"
     },
     "「📈」казерос": {
         "emoji": "🇰",
         "color": discord.Color.red(),
-        "description": "Казерос — повелитель тьмы",
+        "description": "Казерос"
         "short_name": "казерос"
     },
     "「📈」собор": {
         "emoji": "🇸",
         "color": discord.Color.gold(),
-        "description": "Собор — священная цитадель",
+        "description": "Собор"
         "short_name": "собор"
     },
     "「📈」армог": {
         "emoji": "🇦",
         "color": discord.Color.blue(),
-        "description": "Армог — железная крепость",
+        "description": "Армог"
         "short_name": "армог"
     },
     "「📈」мордрум": {
         "emoji": "🇲",
         "color": discord.Color.purple(),
-        "description": "Мордрум — обитель смерти",
+        "description": "Мордрум"
         "short_name": "мордрум"
     },
     "「📈」эгир": {
         "emoji": "🇪",
         "color": discord.Color.teal(),
-        "description": "Эгир — морской владыка",
+        "description": "Эгир",
         "short_name": "эгир"
     }
 }
@@ -80,8 +80,8 @@ class CreateLobbyModal(ui.Modal):
         self.role = role
 
     description_input = ui.TextInput(
-        label="📝 Описание лобби",
-        placeholder="Опишите, кого ищете, требования, условия...",
+        label="📝 4-4",
+        placeholder="+дд +сап",
         style=discord.TextStyle.paragraph,
         required=True,
         max_length=1000
