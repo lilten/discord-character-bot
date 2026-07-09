@@ -25,31 +25,31 @@ RAID_CONFIG = {
     "「📈」зерка": {
         "emoji": "🇿",
         "color": discord.Color.green(),
-        "description": "Зерка"
+        "description": "Зерка",
         "short_name": "зерка"
     },
     "「📈」казерос": {
         "emoji": "🇰",
         "color": discord.Color.red(),
-        "description": "Казерос"
+        "description": "Казерос",
         "short_name": "казерос"
     },
     "「📈」собор": {
         "emoji": "🇸",
         "color": discord.Color.gold(),
-        "description": "Собор"
+        "description": "Собор",
         "short_name": "собор"
     },
     "「📈」армог": {
         "emoji": "🇦",
         "color": discord.Color.blue(),
-        "description": "Армог"
+        "description": "Армог",
         "short_name": "армог"
     },
     "「📈」мордрум": {
         "emoji": "🇲",
         "color": discord.Color.purple(),
-        "description": "Мордрум"
+        "description": "Мордрум",
         "short_name": "мордрум"
     },
     "「📈」эгир": {
