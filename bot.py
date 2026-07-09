@@ -620,10 +620,10 @@ async def setup_menu_auto():
 
         # Создаем меню
         embed = discord.Embed(
-            title="🎯 Создание лобби для рейда",
+            title="🎯 Создание лобби",
             description=(
-                "Выберите рейд, для которого хотите создать лобби:\n\n"
-                "**Доступные рейды:**\n"
+                "Выберите рейд:\n\n"
+                
                 ":regional_indicator_z: **Зерка**\n"
                 ":regional_indicator_k: **Казерос**\n"
                 ":regional_indicator_s: **Собор**\n"
