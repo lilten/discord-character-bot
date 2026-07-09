@@ -316,7 +316,7 @@ class CharacterRoom:
         embed.add_field(name="⚡ Сложность", value=f"{diff_config.get('emoji', '')} {self.difficulty}", inline=True)
         embed.add_field(
             name="📝 Подать заявку",
-            value=f"Требуется роль: {self.role.mention}\n,
+            value=f"Требуется роль: {self.role.mention}\n",
             inline=False
         )
         embed.add_field(
