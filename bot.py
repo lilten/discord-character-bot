@@ -316,7 +316,7 @@ class CharacterRoom:
         embed.add_field(name="⚡ Сложность", value=f"{diff_config.get('emoji', '')} {self.difficulty}", inline=True)
         embed.add_field(
             name="📝 Подать заявку",
-            value=f"Требуется роль: {self.role.mention}\n",
+            value=f"Требуется роль: {self.role.mention}\nЗаявки приходят в ЛС создателю",
             inline=False
         )
         embed.add_field(
@@ -393,15 +393,14 @@ class CharacterRoom:
                 'dm_message': dm_message
             }
 
-        except discord.Forbidden:
-            await self.channel.send(
-                f"{self.creator.mention} ⚠️ Не могу отправить заявку в ЛС! Откройте личные сообщения.",
-                delete_after=30
-            )
-            return False, "У создателя закрыты личные сообщения!"
+            await self.update_main_message()
+            return True, "Заявка успешно отправлена создателю!"
 
-        await self.update_main_message()
-        return True, "Заявка успешно отправлена создателю!"
+        except discord.Forbidden:
+            return False, "У создателя закрыты личные сообщения!"
+        except Exception as e:
+            print(f"Ошибка отправки заявки: {e}")
+            return False, "Произошла ошибка при отправке заявки"
 
     async def process_selection(self, interaction: discord.Interaction,
                                 user: discord.Member, accepted: bool):
@@ -441,7 +440,6 @@ class CharacterRoom:
         )
 
         await self.update_main_message()
-        await self.check_all_processed()
 
     async def notify_applicant(self, user: discord.Member, accepted: bool):
         """Отправляет уведомление участнику"""
@@ -467,29 +465,30 @@ class CharacterRoom:
             pass
 
     async def check_all_processed(self):
-        """Проверяет, все ли заявки обработаны"""
-        all_processed = all(
-            applicant['status'] != 'pending'
-            for applicant in self.applicants.values()
-        )
-
-        if all_processed and self.applicants:
-            await self.close_room(auto=True)
+        """Проверяет заявки (НЕ закрывает лобби автоматически)"""
+        # Лобби теперь закрывается только вручную создателем
+        pass
 
     async def close_room(self, auto=False):
         """Закрывает комнату и удаляет из хранилища"""
         self.is_open = False
 
-        if auto:
-            for user_id, applicant in self.applicants.items():
-                if applicant['status'] == 'pending':
-                    applicant['status'] = 'rejected'
+        # Уведомляем всех ожидающих, что набор закрыт
+        for user_id, applicant in self.applicants.items():
+            if applicant['status'] == 'pending':
+                applicant['status'] = 'rejected'
+                try:
                     await self.notify_applicant(applicant['user'], False)
-                    if applicant.get('dm_message'):
+                except:
+                    pass
+                if applicant.get('dm_message'):
+                    try:
                         embed = applicant['dm_message'].embeds[0]
                         embed.color = discord.Color.red()
                         embed.set_field_at(0, name="📌 Статус", value="❌ Набор закрыт", inline=True)
                         await applicant['dm_message'].edit(embed=embed, view=None)
+                    except:
+                        pass
 
         await self.update_main_message()
 
@@ -533,11 +532,6 @@ class RoomView(ui.View):
 
         modal = ApplicationModal(self.room)
         await interaction.response.send_modal(modal)
-
-    @ui.button(label="📊 Статистика", style=discord.ButtonStyle.blurple)
-    async def stats_button(self, interaction: discord.Interaction, button: ui.Button):
-        """Кнопка для просмотра статистики"""
-        total = len(self.room.applicants)
 
         embed = discord.Embed(
             title=f"📊 Статистика: {self.room.title}",
