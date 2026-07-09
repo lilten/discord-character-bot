@@ -80,8 +80,8 @@ class CreateLobbyModal(ui.Modal):
         self.role = role
 
     leader_nick = ui.TextInput(
-        label="👑 Ник лидера лобби в игре",
-        placeholder="введите ник",
+        label="👑 Ваш ник в игре",
+        placeholder="Введите ваш ник в игре",
         max_length=100,
         required=True
     )
@@ -130,7 +130,6 @@ class CreateLobbyModal(ui.Modal):
         await interaction.response.send_message(
             f"✅ Лобби создано в канале {self.target_channel.mention}!\n"
             f"🎯 {raid_emoji} **{short_name.upper()}** — {diff_emoji} **{self.difficulty}**\n"
-            f"👑 Лидер: **{self.leader_nick.value}**\n"
             f"📝 {self.description_input.value[:100]}...",
             ephemeral=True
         )
@@ -296,7 +295,7 @@ class ApplicationModal(ui.Modal, title="Подать заявку"):
 class CharacterRoom:
     def __init__(self, creator: discord.Member, channel: discord.TextChannel,
                  role: discord.Role, title: str = "", description: str = "",
-                 raid_name: str = "", difficulty: str = ""):
+                 raid_name: str = "", difficulty: str = "", leader_nick: str = ""):
         self.creator = creator
         self.channel = channel
         self.role = role
@@ -304,6 +303,7 @@ class CharacterRoom:
         self.description = description
         self.raid_name = raid_name
         self.difficulty = difficulty
+        self.leader_nick = leader_nick
         self.applicants: Dict[str, dict] = {}
         self.is_open = True
         self.main_message: Optional[discord.Message] = None
@@ -320,7 +320,7 @@ class CharacterRoom:
             description=self.description or f"Поиск кандидатов на роль {self.role.mention}",
             color=color
         )
-        embed.add_field(name="👑 РЛ", value=self.creator.mention, inline=True)
+        embed.add_field(name="👑 Создатель лобби", value=self.creator.mention, inline=True)
         embed.add_field(name="🎭 Роль", value=self.role.mention, inline=True)
         embed.add_field(name="⚡ Сложность", value=f"{diff_config.get('emoji', '')} {self.difficulty}", inline=True)
         embed.add_field(
@@ -334,7 +334,7 @@ class CharacterRoom:
             inline=False
         )
         embed.set_footer(
-            text=f"РЛ: {self.creator.display_name} | {raid_config.get('short_name', '')} | {self.difficulty}")
+            text=f"Создатель лобби: {self.creator.display_name} | {raid_config.get('short_name', '')} | {self.difficulty}")
 
         view = RoomView(self)
 
@@ -369,7 +369,7 @@ class CharacterRoom:
         await self.main_message.edit(embed=embed, view=view)
 
     async def add_applicant(self, user: discord.Member, character_url: str):
-        """Добавляет заявку и отправляет в лс РЛу"""
+        """Добавляет заявку и отправляет в ЛС создателю"""
         if not self.is_open:
             return False, "Набор в лобби закрыт!"
 
@@ -451,13 +451,17 @@ class CharacterRoom:
         await self.update_main_message()
 
     async def notify_applicant(self, user: discord.Member, accepted: bool):
-        """Отправляет уведомление участнику"""
+        """Отправляет уведомление участнику с ником лидера"""
         try:
             if accepted:
                 embed = discord.Embed(
                     title="✅ Заявка принята!",
-                    description=f"Ваша заявка в лобби **{self.title}** одобрена!\n"
-                                f"РЛ: {self.creator.mention}",
+                    description=(
+                        f"Ваша заявка в лобби **{self.title}** одобрена!\n\n"
+                        f"👑 **Лидер лобби:** {self.leader_nick}\n"
+                        f"📁 **Канал:** {self.channel.mention}\n\n"
+                        f"Свяжитесь с лидером для координации!"
+                    ),
                     color=discord.Color.green()
                 )
             else:
@@ -475,7 +479,6 @@ class CharacterRoom:
 
     async def check_all_processed(self):
         """Проверяет заявки (НЕ закрывает лобби автоматически)"""
-        # Лобби теперь закрывается только вручную создателем
         pass
 
     async def close_room(self, auto=False):
@@ -542,12 +545,17 @@ class RoomView(ui.View):
         modal = ApplicationModal(self.room)
         await interaction.response.send_modal(modal)
 
+    @ui.button(label="📊 Статистика", style=discord.ButtonStyle.blurple)
+    async def stats_button(self, interaction: discord.Interaction, button: ui.Button):
+        """Кнопка для просмотра статистики"""
+        total = len(self.room.applicants)
+
         embed = discord.Embed(
             title=f"📊 Статистика: {self.room.title}",
             color=discord.Color.blue()
         )
         embed.add_field(name="📝 Всего заявок", value=str(total), inline=True)
-        embed.set_footer(text=f"РЛ: {self.room.creator.display_name}")
+        embed.set_footer(text=f"Создатель лобби: {self.room.creator.display_name}")
 
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
@@ -556,7 +564,7 @@ class RoomView(ui.View):
         """Кнопка для закрытия комнаты"""
         if interaction.user.id != self.room.creator.id:
             await interaction.response.send_message(
-                "❌ Только РЛ может закрыть набор!",
+                "❌ Только создатель лобби может закрыть набор!",
                 ephemeral=True
             )
             return
@@ -590,13 +598,89 @@ class ApplicationDMView(ui.View):
 
 
 # ============================================
+# АВТОМАТИЧЕСКОЕ СОЗДАНИЕ МЕНЮ
+# ============================================
+
+async def setup_menu_auto():
+    """Автоматически создает меню в канале создать-лобби при запуске бота"""
+    for guild in bot.guilds:
+        channel = discord.utils.get(guild.text_channels, name="создать-лобби")
+        if not channel:
+            print(f"⚠️ Канал «создать-лобби» не найден на сервере {guild.name}")
+            continue
+
+        # Удаляем старые сообщения бота в этом канале
+        try:
+            async for message in channel.history(limit=10):
+                if message.author == bot.user:
+                    await message.delete()
+                    await asyncio.sleep(0.5)
+        except:
+            pass
+
+        # Создаем меню
+        embed = discord.Embed(
+            title="🎯 Создание лобби для рейда",
+            description=(
+                "Выберите рейд, для которого хотите создать лобби:\n\n"
+                "**Доступные рейды:**\n"
+                ":regional_indicator_z: **Зерка**\n"
+                ":regional_indicator_k: **Казерос**\n"
+                ":regional_indicator_s: **Собор**\n"
+                ":regional_indicator_a: **Армог**\n"
+                ":regional_indicator_m: **Мордрум**\n"
+                ":regional_indicator_e: **Эгир**"
+            ),
+            color=discord.Color.gold()
+        )
+        embed.add_field(
+            name="📌 Как это работает?",
+            value=(
+                "1. Нажмите на кнопку рейда\n"
+                "2. Выберите сложность: :regional_indicator_n: Обычный или :regional_indicator_h: Героический\n"
+                "3. Введите ваш ник в игре и описание лобби\n"
+                "4. Лобби создастся в соответствующем канале\n"
+                "5. Участники с нужной ролью смогут подать заявку\n"
+                "6. **Заявки приходят в ЛС создателю лобби**"
+            ),
+            inline=False
+        )
+        embed.add_field(
+            name="⚠️ Важно",
+            value=(
+                "• Для подачи заявки нужна роль рейда\n"
+                "• **Откройте ЛС для получения заявок**"
+            ),
+            inline=False
+        )
+        embed.set_footer(text="Выберите рейд, чтобы начать")
+
+        view = CreateLobbyView()
+
+        await channel.send(embed=embed, view=view)
+        print(f"✅ Меню создано в канале «создать-лобби» на сервере {guild.name}")
+
+
+# ============================================
 # СЛЭШ-КОМАНДЫ
 # ============================================
 
-@bot.tree.command(name="setup_menu", description="Создать меню создания лобби в текущем канале")
+@bot.tree.command(name="setup_menu", description="Пересоздать меню создания лобби (админ)")
 @commands.has_permissions(administrator=True)
 async def setup_menu(interaction: discord.Interaction):
-    """Создает красивое меню с кнопками выбора рейдов"""
+    """Пересоздает меню в текущем канале"""
+    await interaction.response.defer(ephemeral=True)
+
+    # Удаляем старые сообщения бота
+    try:
+        async for message in interaction.channel.history(limit=20):
+            if message.author == bot.user:
+                await message.delete()
+                await asyncio.sleep(0.3)
+    except:
+        pass
+
+    # Создаем новое меню
     embed = discord.Embed(
         title="🎯 Создание лобби для рейда",
         description=(
@@ -616,7 +700,7 @@ async def setup_menu(interaction: discord.Interaction):
         value=(
             "1. Нажмите на кнопку рейда\n"
             "2. Выберите сложность: :regional_indicator_n: Обычный или :regional_indicator_h: Героический\n"
-            "3. Заполните описание лобби\n"
+            "3. Введите ваш ник в игре и описание лобби\n"
             "4. Лобби создастся в соответствующем канале\n"
             "5. Участники с нужной ролью смогут подать заявку\n"
             "6. **Заявки приходят в ЛС создателю лобби**"
@@ -634,7 +718,9 @@ async def setup_menu(interaction: discord.Interaction):
     embed.set_footer(text="Выберите рейд, чтобы начать")
 
     view = CreateLobbyView()
-    await interaction.response.send_message(embed=embed, view=view)
+
+    await interaction.channel.send(embed=embed, view=view)
+    await interaction.followup.send("✅ Меню пересоздано!", ephemeral=True)
 
 
 @bot.tree.command(name="close_room", description="Закрыть ваше активное лобби")
@@ -710,6 +796,9 @@ async def on_ready():
         print(f"✅ Синхронизировано {len(synced)} слэш-команд")
     except Exception as e:
         print(f"❌ Ошибка синхронизации: {e}")
+
+    # Автоматически создаем меню в канале "создать-лобби"
+    await setup_menu_auto()
 
     print('------')
 
