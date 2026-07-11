@@ -83,7 +83,7 @@ DIFFICULTY_CONFIG = {
 class CreateLobbyModal(ui.Modal):
     def __init__(self, raid_key: str, difficulty: str, channel: discord.TextChannel, role: discord.Role):
         raid_config = RAID_CONFIG[raid_key]
-        title = f"{raid_config['emoji']} {raid_config['name']} - {difficulty}"
+        title = f"{raid_config} {raid_config} - {difficulty}"
         super().__init__(title=title[:45])
         self.raid_key = raid_key
         self.difficulty = difficulty
@@ -159,15 +159,15 @@ class CompactMenuView(ui.View):
         view = DifficultyChoiceView(raid_key)
         await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
 
-    @ui.button(label="Зерка", style=discord.ButtonStyle.green, emoji="🇿", row=0)
+    @ui.button(label="Зерка", style=discord.ButtonStyle.blurple, emoji="🇿", row=0)
     async def zerka(self, interaction: discord.Interaction, button: ui.Button):
         await self.handle_raid_click(interaction, "зерка")
 
-    @ui.button(label="Казерос", style=discord.ButtonStyle.red, emoji="🇰", row=0)
+    @ui.button(label="Казерос", style=discord.ButtonStyle.blurple, emoji="🇰", row=0)
     async def kazeros(self, interaction: discord.Interaction, button: ui.Button):
         await self.handle_raid_click(interaction, "казерос")
 
-    @ui.button(label="Собор", style=discord.ButtonStyle.gray, emoji="🇸", row=0)
+    @ui.button(label="Собор", style=discord.ButtonStyle.blurple, emoji="🇸", row=0)
     async def sobor(self, interaction: discord.Interaction, button: ui.Button):
         await self.handle_raid_click(interaction, "собор")
 
@@ -175,7 +175,7 @@ class CompactMenuView(ui.View):
     async def armog(self, interaction: discord.Interaction, button: ui.Button):
         await self.handle_raid_click(interaction, "армог")
 
-    @ui.button(label="Мордрум", style=discord.ButtonStyle.red, emoji="🇲", row=1)
+    @ui.button(label="Мордрум", style=discord.ButtonStyle.blurple, emoji="🇲", row=1)
     async def mordrum(self, interaction: discord.Interaction, button: ui.Button):
         await self.handle_raid_click(interaction, "мордрум")
 
@@ -375,10 +375,10 @@ class CharacterRoom:
             }
 
             await self.update_main_message()
-            return True, "Заявка успешно отправлена создателю!"
+            return True, "Заявка успешно отправлена!"
 
         except discord.Forbidden:
-            return False, "У создателя закрыты личные сообщения!"
+            return False, "У РЛ закрыты личные сообщения!"
         except Exception as e:
             print(f"Ошибка отправки заявки: {e}")
             return False, "Произошла ошибка при отправке заявки"
