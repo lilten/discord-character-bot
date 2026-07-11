@@ -71,7 +71,7 @@ RAID_CONFIG = {
 }
 
 DIFFICULTY_CONFIG = {
-    "Обычный": {"emoji": "🇳", "color": discord.Color.green()},
+    "Обычный": {"emoji": "🇳", "color": discord.Color.red()},
     "Героический": {"emoji": "🇭", "color": discord.Color.red()}
 }
 
@@ -574,8 +574,8 @@ async def on_message(message: discord.Message):
             attachment = message.attachments[0]
             data = temp_data[creator_id]
 
-            # Скачиваем файл сразу
             image_bytes = await attachment.read()
+            print(f"📥 Скриншот получен от {message.author.name}: {len(image_bytes)} байт")
 
             raid_config = RAID_CONFIG[data['raid_key']]
             diff_config = DIFFICULTY_CONFIG[data['difficulty']]
@@ -584,7 +584,7 @@ async def on_message(message: discord.Message):
                 creator=message.author,
                 channel=data['channel'],
                 role=data['role'],
-                title=f"{raid_config['emoji']} {raid_config['name']} - {diff_config['emoji']} {data['difficulty']}",
+                title=f"{raid_config['name']} - {data['difficulty']}",  # ← БЕЗ эмодзи
                 description=data['description'],
                 raid_name=data['raid_key'],
                 difficulty=data['difficulty'],
