@@ -83,7 +83,7 @@ DIFFICULTY_CONFIG = {
 class CreateLobbyModal(ui.Modal):
     def __init__(self, raid_key: str, difficulty: str, channel: discord.TextChannel, role: discord.Role):
         raid_config = RAID_CONFIG[raid_key]
-        title = f"{raid_config} {raid_config} - {difficulty}"
+        title = f"{raid_config['name']} - {difficulty}"
         super().__init__(title=title[:45])
         self.raid_key = raid_key
         self.difficulty = difficulty
@@ -151,7 +151,7 @@ class CompactMenuView(ui.View):
         raid_config = RAID_CONFIG[raid_key]
 
         embed = discord.Embed(
-            title=f"{raid_config['emoji']} {raid_config['name']} — выбор сложности",
+            title=f"{raid_config['name']} — выбор сложности",
             description="Выберите уровень сложности:",
             color=raid_config['color']
         )
@@ -295,18 +295,12 @@ class CharacterRoom:
         color = diff_config.get("color", raid_config.get("color", discord.Color.blue()))
 
         embed = discord.Embed(
-            title=f"📋 {self.title}",
-            description=self.description or f"Поиск кандидатов на роль {self.role.mention}",
+            title=f"{self.title}",
+            description=(
+                f"## {self.description or 'Поиск кандидатов'}\n\n"
+                f"### 🟢 OPEN"
+            ),
             color=color
-        )
-        embed.add_field(name=" РЛ", value=self.creator.mention, inline=True)
-        embed.add_field(name=" Рейд", value=self.role.mention, inline=True)
-        embed.add_field(name=" Сложность", value=f"{diff_config.get('emoji', '')} {self.difficulty}", inline=True)
-        
-        embed.add_field(
-            name="📈 Статистика",
-            value="Заявок: 0",
-            inline=False
         )
 
         view = RoomView(self)
@@ -325,17 +319,12 @@ class CharacterRoom:
 
         embed = self.main_message.embeds[0]
 
-        diff_config = DIFFICULTY_CONFIG.get(self.difficulty, {})
-        if not self.is_open:
-            embed.set_field_at(2, name="Сложность",
-                               value=f"***FULL***", inline=True)
-        else:
-            embed.set_field_at(2, name="Сложность", value=f"{diff_config.get('emoji', '')} {self.difficulty}",
-                               inline=True)
+        status = "### 🟢 OPEN" if self.is_open else "### 🔴 FULL"
 
-        total = len(self.applicants)
-        stats = f"Всего заявок: {total}"
-        embed.set_field_at(4, name="📈 Статистика", value=stats, inline=False)
+        embed.description = (
+            f"## {self.description or 'Поиск кандидатов'}\n\n"
+            f"{status}"
+        )
 
         view = RoomView(self) if self.is_open else None
 
@@ -424,25 +413,30 @@ class CharacterRoom:
 
     async def notify_applicant(self, user: discord.Member, accepted: bool):
         """Отправляет уведомление участнику"""
-        try:
-            if accepted:
-                if self.screenshot_bytes:
+        if accepted:
+            if self.screenshot_bytes:
+                try:
                     file = discord.File(
                         io.BytesIO(self.screenshot_bytes),
                         filename="screenshot.png"
                     )
                     await user.send(file=file)
-                else:
-                    await user.send(
-                        f"✅ Ваша заявка в лобби **{self.title}** одобрена!\n"
-                        
-                    )
+                except:
+                    pass
             else:
+                try:
+                    await user.send(
+                        f"✅ Ваша заявка в лобби **{self.title}** одобрена!"
+                    )
+                except:
+                    pass
+        else:
+            try:
                 await user.send(
                     f"❌ Ваша заявка была отклонена."
                 )
-        except discord.Forbidden:
-            pass
+            except:
+                pass
 
     async def check_all_processed(self):
         """Проверяет заявки (НЕ закрывает лобби автоматически)"""
@@ -511,15 +505,7 @@ class RoomView(ui.View):
         modal = ApplicationModal(self.room)
         await interaction.response.send_modal(modal)
 
-        embed = discord.Embed(
-            title=f"📊 Статистика: {self.room.title}",
-            color=discord.Color.blue()
-        )
-        embed.add_field(name="ЗАЯВОК", value=str(total), inline=True)
-
-        await interaction.response.send_message(embed=embed, ephemeral=True)
-
-    @ui.button(label="🔒FULL", style=discord.ButtonStyle.red)
+    @ui.button(label="🔒 FULL", style=discord.ButtonStyle.red)
     async def close_room_button(self, interaction: discord.Interaction, button: ui.Button):
         """Кнопка для закрытия комнаты"""
         if interaction.user.id != self.room.creator.id:
@@ -531,7 +517,7 @@ class RoomView(ui.View):
 
         await self.room.close_room()
         await interaction.response.send_message(
-            "🔴FULL!",
+            "🔴 FULL!",
             ephemeral=True
         )
 
@@ -584,7 +570,7 @@ async def on_message(message: discord.Message):
                 creator=message.author,
                 channel=data['channel'],
                 role=data['role'],
-                title=f"{raid_config['name']} - {data['difficulty']}",  # ← БЕЗ эмодзи
+                title=f"{raid_config['name']} - {data['difficulty']}",
                 description=data['description'],
                 raid_name=data['raid_key'],
                 difficulty=data['difficulty'],
@@ -711,7 +697,7 @@ async def close_room_command(interaction: discord.Interaction):
     room = active_rooms[creator_id]
     await room.close_room()
     await interaction.response.send_message(
-        "🔴FULL",
+        "🔴 FULL",
         ephemeral=True
     )
 
