@@ -439,11 +439,11 @@ class CharacterRoom:
                 else:
                     await user.send(
                         f"✅ Ваша заявка в лобби **{self.title}** одобрена!\n"
-                        f"Свяжитесь с создателем: {self.creator.mention}"
+                        
                     )
             else:
                 await user.send(
-                    f"❌ Ваша заявка в лобби **{self.title}** была отклонена."
+                    f"❌ Ваша заявка была отклонена."
                 )
         except discord.Forbidden:
             pass
@@ -467,7 +467,7 @@ class CharacterRoom:
                     try:
                         embed = applicant['dm_message'].embeds[0]
                         embed.color = discord.Color.red()
-                        embed.set_field_at(0, name="📌 Статус", value="❌ Набор закрыт", inline=True)
+                        embed.set_field_at(0, name="📌 Статус", value="🔴 FULL", inline=True)
                         await applicant['dm_message'].edit(embed=embed, view=None)
                     except:
                         pass
@@ -515,33 +515,27 @@ class RoomView(ui.View):
         modal = ApplicationModal(self.room)
         await interaction.response.send_modal(modal)
 
-    @ui.button(label="📊 Статистика", style=discord.ButtonStyle.blurple)
-    async def stats_button(self, interaction: discord.Interaction, button: ui.Button):
-        """Кнопка для просмотра статистики"""
-        total = len(self.room.applicants)
-
         embed = discord.Embed(
             title=f"📊 Статистика: {self.room.title}",
             color=discord.Color.blue()
         )
-        embed.add_field(name="📝 Всего заявок", value=str(total), inline=True)
-        embed.set_footer(text=f"Создатель: {self.room.creator.display_name}")
+        embed.add_field(name="ЗАЯВОК", value=str(total), inline=True)
 
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
-    @ui.button(label="🔒 Закрыть набор", style=discord.ButtonStyle.red)
+    @ui.button(label="🔒FULL", style=discord.ButtonStyle.red)
     async def close_room_button(self, interaction: discord.Interaction, button: ui.Button):
         """Кнопка для закрытия комнаты"""
         if interaction.user.id != self.room.creator.id:
             await interaction.response.send_message(
-                "❌ Только создатель может закрыть набор!",
+                "❌ Только создатель лобби может закрыть набор!",
                 ephemeral=True
             )
             return
 
         await self.room.close_room()
         await interaction.response.send_message(
-            "🔒 Набор закрыт!",
+            "🔴FULL!",
             ephemeral=True
         )
 
@@ -696,7 +690,7 @@ async def setup_menu(interaction: discord.Interaction):
 
     embed = discord.Embed(
         title="",
-        description="Выберите рейд для создания лобби:",
+        description="Выберите рейд:",
         color=discord.Color.gold()
     )
 
@@ -721,7 +715,7 @@ async def close_room_command(interaction: discord.Interaction):
     room = active_rooms[creator_id]
     await room.close_room()
     await interaction.response.send_message(
-        "🔒 Набор закрыт",
+        "🔴FULL",
         ephemeral=True
     )
 
