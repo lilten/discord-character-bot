@@ -159,27 +159,27 @@ class CompactMenuView(ui.View):
         view = DifficultyChoiceView(raid_key)
         await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
 
-    @ui.button(label="Зерка", style=discord.ButtonStyle.blurple, emoji="🇿", row=0)
+    @ui.button(label="Зерка", style=discord.ButtonStyle.green, row=0)
     async def zerka(self, interaction: discord.Interaction, button: ui.Button):
         await self.handle_raid_click(interaction, "зерка")
 
-    @ui.button(label="Казерос", style=discord.ButtonStyle.blurple, emoji="🇰", row=0)
+    @ui.button(label="Казерос", style=discord.ButtonStyle.red, row=0)
     async def kazeros(self, interaction: discord.Interaction, button: ui.Button):
         await self.handle_raid_click(interaction, "казерос")
 
-    @ui.button(label="Собор", style=discord.ButtonStyle.blurple, emoji="🇸", row=0)
+    @ui.button(label="Собор", style=discord.ButtonStyle.gray, row=0)
     async def sobor(self, interaction: discord.Interaction, button: ui.Button):
         await self.handle_raid_click(interaction, "собор")
 
-    @ui.button(label="Армог", style=discord.ButtonStyle.blurple, emoji="🇦", row=1)
+    @ui.button(label="Армог", style=discord.ButtonStyle.blurple, row=1)
     async def armog(self, interaction: discord.Interaction, button: ui.Button):
         await self.handle_raid_click(interaction, "армог")
 
-    @ui.button(label="Мордрум", style=discord.ButtonStyle.blurple, emoji="🇲", row=1)
+    @ui.button(label="Мордрум", style=discord.ButtonStyle.red, row=1)
     async def mordrum(self, interaction: discord.Interaction, button: ui.Button):
         await self.handle_raid_click(interaction, "мордрум")
 
-    @ui.button(label="Эгир", style=discord.ButtonStyle.blurple, emoji="🇪", row=1)
+    @ui.button(label="Эгир", style=discord.ButtonStyle.blurple, row=1)
     async def egir(self, interaction: discord.Interaction, button: ui.Button):
         await self.handle_raid_click(interaction, "эгир")
 
