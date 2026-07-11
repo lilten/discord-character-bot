@@ -4,6 +4,8 @@ from discord import ui
 import asyncio
 from typing import Dict, Optional
 import os
+import io
+import aiohttp
 
 # Настройки бота
 intents = discord.Intents.default()
@@ -433,11 +435,26 @@ class CharacterRoom:
         """Отправляет уведомление участнику"""
         try:
             if accepted:
-                # Только скриншот лобби
+                # Отправляем скриншот как изображение
                 if self.screenshot_url:
+                    # Создаём embed с картинкой
                     embed = discord.Embed(color=discord.Color.green())
                     embed.set_image(url=self.screenshot_url)
                     await user.send(embed=embed)
+                    
+                    # Дополнительно отправляем сам файл для надёжности
+                    try:
+                        async with aiohttp.ClientSession() as session:
+                            async with session.get(self.screenshot_url) as resp:
+                                if resp.status == 200:
+                                    image_data = await resp.read()
+                                    file = discord.File(
+                                        io.BytesIO(image_data),
+                                        filename="lobby_screenshot.png"
+                                    )
+                                    await user.send(file=file)
+                    except:
+                        pass  # Если не получилось отправить файл — ничего страшного
                 else:
                     await user.send(
                         f"✅ Ваша заявка в лобби **{self.title}** одобрена!\n"
