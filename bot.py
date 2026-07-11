@@ -5,7 +5,6 @@ import asyncio
 from typing import Dict, Optional
 import os
 import io
-import aiohttp
 
 # Настройки бота
 intents = discord.Intents.default()
@@ -113,7 +112,6 @@ class CreateLobbyModal(ui.Modal):
             )
             return
 
-        # Сохраняем данные во временное хранилище
         temp_data[creator_id] = {
             'raid_key': self.raid_key,
             'difficulty': self.difficulty,
@@ -122,7 +120,6 @@ class CreateLobbyModal(ui.Modal):
             'description': self.description_input.value
         }
 
-        # Просим загрузить скриншот в чат
         await interaction.response.send_message(
             "🖼️ **Загрузите скриншот лобби**\n"
             "Просто вставьте изображение в этот чат (Ctrl+V) в течение 2 минут.\n"
@@ -277,7 +274,7 @@ class ApplicationModal(ui.Modal, title="Подать заявку"):
 class CharacterRoom:
     def __init__(self, creator: discord.Member, channel: discord.TextChannel,
                  role: discord.Role, title: str = "", description: str = "",
-                 raid_name: str = "", difficulty: str = "", screenshot_url: str = ""):
+                 raid_name: str = "", difficulty: str = "", screenshot_bytes: bytes = None):
         self.creator = creator
         self.channel = channel
         self.role = role
@@ -285,7 +282,7 @@ class CharacterRoom:
         self.description = description
         self.raid_name = raid_name
         self.difficulty = difficulty
-        self.screenshot_url = screenshot_url
+        self.screenshot_bytes = screenshot_bytes
         self.applicants: Dict[str, dict] = {}
         self.is_open = True
         self.main_message: Optional[discord.Message] = None
@@ -435,27 +432,17 @@ class CharacterRoom:
         """Отправляет уведомление участнику"""
         try:
             if accepted:
-                # Отправляем скриншот как файл
-                if self.screenshot_url:
-                    try:
-                        async with aiohttp.ClientSession() as session:
-                            async with session.get(self.screenshot_url) as resp:
-                                if resp.status == 200:
-                                    image_data = await resp.read()
-                                    file = discord.File(
-                                        io.BytesIO(image_data),
-                                        filename="screenshot.png"
-                                    )
-                                    await user.send(file=file)
-                                    return
-                    except:
-                        pass
-                
-                # Если не получилось — отправляем текст
-                await user.send(
-                    f"✅ Ваша заявка в лобби **{self.title}** одобрена!\n"
-                    f"Свяжитесь с создателем: {self.creator.mention}"
-                )
+                if self.screenshot_bytes:
+                    file = discord.File(
+                        io.BytesIO(self.screenshot_bytes),
+                        filename="screenshot.png"
+                    )
+                    await user.send(file=file)
+                else:
+                    await user.send(
+                        f"✅ Ваша заявка в лобби **{self.title}** одобрена!\n"
+                        f"Свяжитесь с создателем: {self.creator.mention}"
+                    )
             else:
                 await user.send(
                     f"❌ Ваша заявка в лобби **{self.title}** была отклонена."
@@ -594,12 +581,13 @@ async def on_message(message: discord.Message):
 
     creator_id = str(message.author.id)
 
-    # Проверяем, ожидает ли пользователь загрузки скриншота
     if creator_id in temp_data:
-        # Проверяем, есть ли вложения
         if message.attachments:
-            screenshot_url = message.attachments[0].url
+            attachment = message.attachments[0]
             data = temp_data[creator_id]
+
+            # Скачиваем файл сразу
+            image_bytes = await attachment.read()
 
             raid_config = RAID_CONFIG[data['raid_key']]
             diff_config = DIFFICULTY_CONFIG[data['difficulty']]
@@ -612,7 +600,7 @@ async def on_message(message: discord.Message):
                 description=data['description'],
                 raid_name=data['raid_key'],
                 difficulty=data['difficulty'],
-                screenshot_url=screenshot_url
+                screenshot_bytes=image_bytes
             )
 
             active_rooms[creator_id] = room
@@ -627,7 +615,6 @@ async def on_message(message: discord.Message):
             await message.delete()
             return
 
-    # Обрабатываем команды
     await bot.process_commands(message)
 
 
@@ -643,7 +630,6 @@ async def setup_menu_auto():
             print(f"⚠️ Канал «создать-лобби» не найден на сервере {guild.name}")
             continue
 
-        # Удаляем старые сообщения бота
         try:
             async for message in channel.history(limit=20):
                 if message.author == bot.user:
@@ -652,7 +638,6 @@ async def setup_menu_auto():
         except:
             pass
 
-        # Создаем ОДНО компактное меню
         embed = discord.Embed(
             title="",
             description="Выберите рейд для создания лобби:",
