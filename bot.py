@@ -120,83 +120,11 @@ class CreateLobbyModal(ui.Modal):
             'description': self.description_input.value
         }
 
-        # Просим загрузить скриншот
-        embed = discord.Embed(
-            title="🖼️ Загрузите скриншот лобби",
-            description="Нажмите кнопку ниже и вставьте скриншот (Ctrl+V) или ссылку.\n\n"
-                       "⏳ У вас есть 2 минуты.",
-            color=discord.Color.gold()
-        )
-        view = ScreenshotUploadView(creator_id)
-        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
-
-
-# ============================================
-# VIEW ДЛЯ ЗАГРУЗКИ СКРИНШОТА
-# ============================================
-
-class ScreenshotUploadView(ui.View):
-    def __init__(self, creator_id: str):
-        super().__init__(timeout=120)
-        self.creator_id = creator_id
-
-    @ui.button(label="📎 Загрузить скриншот", style=discord.ButtonStyle.green)
-    async def upload_button(self, interaction: discord.Interaction, button: ui.Button):
-        modal = ScreenshotModal(self.creator_id)
-        await interaction.response.send_modal(modal)
-
-    async def on_timeout(self):
-        if self.creator_id in temp_data:
-            del temp_data[self.creator_id]
-
-
-class ScreenshotModal(ui.Modal, title="Загрузите скриншот"):
-    def __init__(self, creator_id: str):
-        super().__init__()
-        self.creator_id = creator_id
-
-    screenshot_input = ui.TextInput(
-        label="📎 Вставьте скриншот (Ctrl+V) или ссылку",
-        placeholder="Вставьте изображение из буфера обмена или ссылку...",
-        max_length=500,
-        required=True
-    )
-
-    async def on_submit(self, interaction: discord.Interaction):
-        data = temp_data.get(self.creator_id)
-
-        if not data:
-            await interaction.response.send_message(
-                "❌ Время вышло! Создайте лобби заново.",
-                ephemeral=True
-            )
-            return
-
-        screenshot_url = self.screenshot_input.value
-
-        raid_config = RAID_CONFIG[data['raid_key']]
-        diff_config = DIFFICULTY_CONFIG[data['difficulty']]
-
-        room = CharacterRoom(
-            creator=interaction.user,
-            channel=data['channel'],
-            role=data['role'],
-            title=f"{raid_config['emoji']} {raid_config['name']} - {diff_config['emoji']} {data['difficulty']}",
-            description=data['description'],
-            raid_name=data['raid_key'],
-            difficulty=data['difficulty'],
-            screenshot_url=screenshot_url
-        )
-
-        active_rooms[self.creator_id] = room
-
-        del temp_data[self.creator_id]
-
-        await room.create_room_message()
-
+        # Просим загрузить скриншот в чат
         await interaction.response.send_message(
-            f"✅ Лобби создано в канале {data['channel'].mention}!\n"
-            f"🎯 {raid_config['emoji']} **{raid_config['name']}** — {diff_config['emoji']} **{data['difficulty']}**",
+            "🖼️ **Загрузите скриншот лобби**\n"
+            "Просто вставьте изображение в этот чат (Ctrl+V) в течение 2 минут.\n"
+            "Бот прикрепит его к лобби.",
             ephemeral=True
         )
 
@@ -639,6 +567,55 @@ class ApplicationDMView(ui.View):
     async def reject_button(self, interaction: discord.Interaction, button: ui.Button):
         """Кнопка для отклонения заявки"""
         await self.room.process_selection(interaction, self.applicant, False)
+
+
+# ============================================
+# ОБРАБОТЧИК СООБЩЕНИЙ ДЛЯ ЗАГРУЗКИ СКРИНШОТА
+# ============================================
+
+@bot.event
+async def on_message(message: discord.Message):
+    """Перехватывает скриншот от создателя лобби"""
+    if message.author.bot:
+        return
+
+    creator_id = str(message.author.id)
+
+    # Проверяем, ожидает ли пользователь загрузки скриншота
+    if creator_id in temp_data:
+        # Проверяем, есть ли вложения
+        if message.attachments:
+            screenshot_url = message.attachments[0].url
+            data = temp_data[creator_id]
+
+            raid_config = RAID_CONFIG[data['raid_key']]
+            diff_config = DIFFICULTY_CONFIG[data['difficulty']]
+
+            room = CharacterRoom(
+                creator=message.author,
+                channel=data['channel'],
+                role=data['role'],
+                title=f"{raid_config['emoji']} {raid_config['name']} - {diff_config['emoji']} {data['difficulty']}",
+                description=data['description'],
+                raid_name=data['raid_key'],
+                difficulty=data['difficulty'],
+                screenshot_url=screenshot_url
+            )
+
+            active_rooms[creator_id] = room
+            del temp_data[creator_id]
+
+            await room.create_room_message()
+
+            await message.reply(
+                f"✅ Лобби создано в канале {data['channel'].mention}!",
+                delete_after=10
+            )
+            await message.delete()
+            return
+
+    # Обрабатываем команды
+    await bot.process_commands(message)
 
 
 # ============================================
