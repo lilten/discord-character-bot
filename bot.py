@@ -159,15 +159,15 @@ class CompactMenuView(ui.View):
         view = DifficultyChoiceView(raid_key)
         await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
 
-    @ui.button(label="Зерка", style=discord.ButtonStyle.green, row=0)
+    @ui.button(label="Зерка", style=discord.ButtonStyle.red, row=0)
     async def zerka(self, interaction: discord.Interaction, button: ui.Button):
         await self.handle_raid_click(interaction, "зерка")
 
-    @ui.button(label="Казерос", style=discord.ButtonStyle.red, row=0)
+    @ui.button(label="Казерос", style=discord.ButtonStyle.blurple, row=0)
     async def kazeros(self, interaction: discord.Interaction, button: ui.Button):
         await self.handle_raid_click(interaction, "казерос")
 
-    @ui.button(label="Собор", style=discord.ButtonStyle.gray, row=0)
+    @ui.button(label="Собор", style=discord.ButtonStyle.red, row=0)
     async def sobor(self, interaction: discord.Interaction, button: ui.Button):
         await self.handle_raid_click(interaction, "собор")
 
