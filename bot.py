@@ -18,6 +18,9 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 # ============================================
 active_rooms: Dict[str, 'CharacterRoom'] = {}
 
+# Временное хранилище для создания лобби
+temp_data: Dict[str, dict] = {}
+
 # ============================================
 # КОНФИГУРАЦИЯ РЕЙДОВ
 # ============================================
@@ -73,7 +76,7 @@ DIFFICULTY_CONFIG = {
 
 
 # ============================================
-# МОДАЛЬНОЕ ОКНО ДЛЯ СОЗДАНИЯ ЛОББИ
+# МОДАЛЬНОЕ ОКНО ДЛЯ ОПИСАНИЯ ЛОББИ
 # ============================================
 
 class CreateLobbyModal(ui.Modal):
@@ -85,13 +88,6 @@ class CreateLobbyModal(ui.Modal):
         self.difficulty = difficulty
         self.target_channel = channel
         self.role = role
-
-    screenshot_url = ui.TextInput(
-        label="🖼️ Ссылка на скриншот лобби",
-        placeholder="https://i.imgur.com/пример.png",
-        max_length=500,
-        required=True
-    )
 
     description_input = ui.TextInput(
         label="📝 Описание",
@@ -115,27 +111,92 @@ class CreateLobbyModal(ui.Modal):
             )
             return
 
-        raid_config = RAID_CONFIG[self.raid_key]
-        diff_config = DIFFICULTY_CONFIG[self.difficulty]
+        # Сохраняем данные во временное хранилище
+        temp_data[creator_id] = {
+            'raid_key': self.raid_key,
+            'difficulty': self.difficulty,
+            'channel': self.target_channel,
+            'role': self.role,
+            'description': self.description_input.value
+        }
+
+        # Просим загрузить скриншот
+        embed = discord.Embed(
+            title="🖼️ Загрузите скриншот лобби",
+            description="Нажмите кнопку ниже и вставьте скриншот (Ctrl+V) или ссылку.\n\n"
+                       "⏳ У вас есть 2 минуты.",
+            color=discord.Color.gold()
+        )
+        view = ScreenshotUploadView(creator_id)
+        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+
+
+# ============================================
+# VIEW ДЛЯ ЗАГРУЗКИ СКРИНШОТА
+# ============================================
+
+class ScreenshotUploadView(ui.View):
+    def __init__(self, creator_id: str):
+        super().__init__(timeout=120)
+        self.creator_id = creator_id
+
+    @ui.button(label="📎 Загрузить скриншот", style=discord.ButtonStyle.green)
+    async def upload_button(self, interaction: discord.Interaction, button: ui.Button):
+        modal = ScreenshotModal(self.creator_id)
+        await interaction.response.send_modal(modal)
+
+    async def on_timeout(self):
+        if self.creator_id in temp_data:
+            del temp_data[self.creator_id]
+
+
+class ScreenshotModal(ui.Modal, title="Загрузите скриншот"):
+    def __init__(self, creator_id: str):
+        super().__init__()
+        self.creator_id = creator_id
+
+    screenshot_input = ui.TextInput(
+        label="📎 Вставьте скриншот (Ctrl+V) или ссылку",
+        placeholder="Вставьте изображение из буфера обмена или ссылку...",
+        max_length=500,
+        required=True
+    )
+
+    async def on_submit(self, interaction: discord.Interaction):
+        data = temp_data.get(self.creator_id)
+
+        if not data:
+            await interaction.response.send_message(
+                "❌ Время вышло! Создайте лобби заново.",
+                ephemeral=True
+            )
+            return
+
+        screenshot_url = self.screenshot_input.value
+
+        raid_config = RAID_CONFIG[data['raid_key']]
+        diff_config = DIFFICULTY_CONFIG[data['difficulty']]
 
         room = CharacterRoom(
             creator=interaction.user,
-            channel=self.target_channel,
-            role=self.role,
-            title=f"{raid_config['emoji']} {raid_config['name']} - {diff_config['emoji']} {self.difficulty}",
-            description=self.description_input.value,
-            raid_name=self.raid_key,
-            difficulty=self.difficulty,
-            screenshot_url=self.screenshot_url.value
+            channel=data['channel'],
+            role=data['role'],
+            title=f"{raid_config['emoji']} {raid_config['name']} - {diff_config['emoji']} {data['difficulty']}",
+            description=data['description'],
+            raid_name=data['raid_key'],
+            difficulty=data['difficulty'],
+            screenshot_url=screenshot_url
         )
 
-        active_rooms[creator_id] = room
+        active_rooms[self.creator_id] = room
+
+        del temp_data[self.creator_id]
 
         await room.create_room_message()
 
         await interaction.response.send_message(
-            f"✅ Лобби создано в канале {self.target_channel.mention}!\n"
-            f"🎯 {raid_config['emoji']} **{raid_config['name']}** — {diff_config['emoji']} **{self.difficulty}**",
+            f"✅ Лобби создано в канале {data['channel'].mention}!\n"
+            f"🎯 {raid_config['emoji']} **{raid_config['name']}** — {diff_config['emoji']} **{data['difficulty']}**",
             ephemeral=True
         )
 
@@ -616,7 +677,7 @@ async def setup_menu_auto():
 
 async def menu_health_check():
     """Проверяет наличие меню каждые 5 минут и восстанавливает при необходимости"""
-    await asyncio.sleep(10)  # Небольшая задержка перед первой проверкой
+    await asyncio.sleep(10)
 
     while True:
         try:
@@ -625,7 +686,6 @@ async def menu_health_check():
                 if not channel:
                     continue
 
-                # Проверяем, есть ли сообщение от бота с меню
                 has_menu = False
                 async for message in channel.history(limit=10):
                     if message.author == bot.user and message.components:
@@ -640,7 +700,7 @@ async def menu_health_check():
         except Exception as e:
             print(f"❌ Ошибка проверки меню: {e}")
 
-        await asyncio.sleep(300)  # Проверка каждые 5 минут
+        await asyncio.sleep(300)
 
 
 # ============================================
@@ -747,10 +807,8 @@ async def on_ready():
     except Exception as e:
         print(f"❌ Ошибка синхронизации: {e}")
 
-    # Сразу создаем меню при запуске
     await setup_menu_auto()
 
-    # Запускаем проверку каждые 5 минут
     bot.loop.create_task(menu_health_check())
 
     print('------')
