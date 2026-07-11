@@ -302,11 +302,7 @@ class CharacterRoom:
         embed.add_field(name=" РЛ", value=self.creator.mention, inline=True)
         embed.add_field(name=" Рейд", value=self.role.mention, inline=True)
         embed.add_field(name=" Сложность", value=f"{diff_config.get('emoji', '')} {self.difficulty}", inline=True)
-        embed.add_field(
-            name="📝 Подать заявку",
-            value=f"Требуется роль: {self.role.mention}",
-            inline=False
-        )
+        
         embed.add_field(
             name="📈 Статистика",
             value="Заявок: 0",
@@ -488,7 +484,7 @@ class RoomView(ui.View):
         super().__init__(timeout=None)
         self.room = room
 
-    @ui.button(label="📝 Отправить заявку", style=discord.ButtonStyle.green)
+    @ui.button(label="📝 Подать заявку", style=discord.ButtonStyle.green)
     async def apply_button(self, interaction: discord.Interaction, button: ui.Button):
         """Кнопка для подачи заявки"""
         if interaction.user.id == self.room.creator.id:
