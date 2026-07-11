@@ -299,12 +299,12 @@ class CharacterRoom:
             description=self.description or f"Поиск кандидатов на роль {self.role.mention}",
             color=color
         )
-        embed.add_field(name="👑 Создатель", value=self.creator.mention, inline=True)
-        embed.add_field(name="🎭 Роль", value=self.role.mention, inline=True)
-        embed.add_field(name="⚡ Сложность", value=f"{diff_config.get('emoji', '')} {self.difficulty}", inline=True)
+        embed.add_field(name=" РЛ", value=self.creator.mention, inline=True)
+        embed.add_field(name=" Рейд", value=self.role.mention, inline=True)
+        embed.add_field(name=" Сложность", value=f"{diff_config.get('emoji', '')} {self.difficulty}", inline=True)
         embed.add_field(
             name="📝 Подать заявку",
-            value=f"Требуется роль: {self.role.mention}\nЗаявки приходят в ЛС создателю",
+            value=f"Требуется роль: {self.role.mention}",
             inline=False
         )
         embed.add_field(
@@ -312,13 +312,11 @@ class CharacterRoom:
             value="Заявок: 0",
             inline=False
         )
-        embed.set_footer(
-            text=f"Создатель: {self.creator.display_name} | {raid_config.get('name', '')} | {self.difficulty}")
 
         view = RoomView(self)
 
         self.main_message = await self.channel.send(
-            content=f"{self.role.mention} — {self.creator.mention} открыл набор!",
+            content=f"{self.role.mention}",
             embed=embed,
             view=view
         )
@@ -333,10 +331,10 @@ class CharacterRoom:
 
         diff_config = DIFFICULTY_CONFIG.get(self.difficulty, {})
         if not self.is_open:
-            embed.set_field_at(2, name="⚡ Сложность",
-                               value=f"{diff_config.get('emoji', '')} {self.difficulty} (ЗАКРЫТО)", inline=True)
+            embed.set_field_at(2, name="Сложность",
+                               value=f"***FULL***", inline=True)
         else:
-            embed.set_field_at(2, name="⚡ Сложность", value=f"{diff_config.get('emoji', '')} {self.difficulty}",
+            embed.set_field_at(2, name="Сложность", value=f"{diff_config.get('emoji', '')} {self.difficulty}",
                                inline=True)
 
         total = len(self.applicants)
