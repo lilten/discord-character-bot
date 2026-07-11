@@ -435,14 +435,8 @@ class CharacterRoom:
         """Отправляет уведомление участнику"""
         try:
             if accepted:
-                # Отправляем скриншот как изображение
+                # Отправляем скриншот как файл
                 if self.screenshot_url:
-                    # Создаём embed с картинкой
-                    embed = discord.Embed(color=discord.Color.green())
-                    embed.set_image(url=self.screenshot_url)
-                    await user.send(embed=embed)
-                    
-                    # Дополнительно отправляем сам файл для надёжности
                     try:
                         async with aiohttp.ClientSession() as session:
                             async with session.get(self.screenshot_url) as resp:
@@ -450,16 +444,18 @@ class CharacterRoom:
                                     image_data = await resp.read()
                                     file = discord.File(
                                         io.BytesIO(image_data),
-                                        filename="lobby_screenshot.png"
+                                        filename="screenshot.png"
                                     )
                                     await user.send(file=file)
+                                    return
                     except:
-                        pass  # Если не получилось отправить файл — ничего страшного
-                else:
-                    await user.send(
-                        f"✅ Ваша заявка в лобби **{self.title}** одобрена!\n"
-                        f"Свяжитесь с создателем: {self.creator.mention}"
-                    )
+                        pass
+                
+                # Если не получилось — отправляем текст
+                await user.send(
+                    f"✅ Ваша заявка в лобби **{self.title}** одобрена!\n"
+                    f"Свяжитесь с создателем: {self.creator.mention}"
+                )
             else:
                 await user.send(
                     f"❌ Ваша заявка в лобби **{self.title}** была отклонена."
