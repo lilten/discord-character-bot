@@ -302,6 +302,7 @@ class CharacterRoom:
             ),
             color=color
         )
+        embed.set_footer(text=f"created by: {self.creator.display_name}")
 
         view = RoomView(self)
 
@@ -325,6 +326,7 @@ class CharacterRoom:
             f"## {self.description or 'Поиск кандидатов'}\n\n"
             f"{status}"
         )
+        embed.set_footer(text=f"created by: {self.creator.display_name}")
 
         view = RoomView(self) if self.is_open else None
 
