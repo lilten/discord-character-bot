@@ -80,7 +80,7 @@ DIFFICULTY_CONFIG = {
 # МОДАЛЬНОЕ ОКНО ДЛЯ ИЗМЕНЕНИЯ ОПИСАНИЯ
 # ============================================
 
-class EditDescriptionModal(ui.Modal, title="Изменить описание"):
+class EditDescriptionModal(ui.Modal, title="rename"):
     def __init__(self, room: 'CharacterRoom'):
         super().__init__()
         self.room = room
