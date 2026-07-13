@@ -713,7 +713,7 @@ async def setup_menu(interaction: discord.Interaction):
     await interaction.response.defer(ephemeral=True)
 
     try:
-        async for message in interaction.channel.history(limit:30):
+        async for message in interaction.channel.history(limit=30):
             if message.author == bot.user:
                 await message.delete()
                 await asyncio.sleep(0.3)
