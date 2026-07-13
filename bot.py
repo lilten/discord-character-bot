@@ -77,6 +77,40 @@ DIFFICULTY_CONFIG = {
 
 
 # ============================================
+# МОДАЛЬНОЕ ОКНО ДЛЯ ИЗМЕНЕНИЯ ОПИСАНИЯ
+# ============================================
+
+class EditDescriptionModal(ui.Modal, title="Изменить описание"):
+    def __init__(self, room: 'CharacterRoom'):
+        super().__init__()
+        self.room = room
+
+    new_description = ui.TextInput(
+        label="📝 Новое описание",
+        placeholder="Введите новое описание лобби...",
+        style=discord.TextStyle.paragraph,
+        required=True,
+        max_length=1000
+    )
+
+    async def on_submit(self, interaction: discord.Interaction):
+        if interaction.user.id != self.room.creator.id:
+            await interaction.response.send_message(
+                "❌ Только создатель может изменить описание!",
+                ephemeral=True
+            )
+            return
+
+        self.room.description = self.new_description.value
+        await self.room.update_main_message()
+
+        await interaction.response.send_message(
+            "✅ Описание обновлено!",
+            ephemeral=True
+        )
+
+
+# ============================================
 # МОДАЛЬНОЕ ОКНО ДЛЯ ОПИСАНИЯ ЛОББИ
 # ============================================
 
@@ -480,7 +514,7 @@ class RoomView(ui.View):
         super().__init__(timeout=None)
         self.room = room
 
-    @ui.button(label="📝 Подать заявку", style=discord.ButtonStyle.green)
+    @ui.button(label="📝 Подать заявку", style=discord.ButtonStyle.green, row=0)
     async def apply_button(self, interaction: discord.Interaction, button: ui.Button):
         """Кнопка для подачи заявки"""
         if interaction.user.id == self.room.creator.id:
@@ -507,7 +541,21 @@ class RoomView(ui.View):
         modal = ApplicationModal(self.room)
         await interaction.response.send_modal(modal)
 
-    @ui.button(label="🔒 FULL", style=discord.ButtonStyle.red)
+    @ui.button(label="✏️ Изменить описание", style=discord.ButtonStyle.blurple, row=0)
+    async def edit_description_button(self, interaction: discord.Interaction, button: ui.Button):
+        """Кнопка для изменения описания"""
+        if interaction.user.id != self.room.creator.id:
+            await interaction.response.send_message(
+                "❌ Только создатель может изменить описание!",
+                ephemeral=True
+            )
+            return
+
+        modal = EditDescriptionModal(self.room)
+        modal.new_description.default = self.room.description
+        await interaction.response.send_modal(modal)
+
+    @ui.button(label="🔒 FULL", style=discord.ButtonStyle.red, row=0)
     async def close_room_button(self, interaction: discord.Interaction, button: ui.Button):
         """Кнопка для закрытия комнаты"""
         if interaction.user.id != self.room.creator.id:
@@ -665,7 +713,7 @@ async def setup_menu(interaction: discord.Interaction):
     await interaction.response.defer(ephemeral=True)
 
     try:
-        async for message in interaction.channel.history(limit=30):
+        async for message in interaction.channel.history(limit:30):
             if message.author == bot.user:
                 await message.delete()
                 await asyncio.sleep(0.3)
